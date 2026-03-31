@@ -720,159 +720,163 @@
       Great for GitHub Pages, Netlify Drop, or any simple website host.
     </div>
   </div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const aimSlider = document.getElementById("aimSlider");
+  const powerSlider = document.getElementById("powerSlider");
+  const aimValue = document.getElementById("aimValue");
+  const powerValue = document.getElementById("powerValue");
+  const aimLine = document.getElementById("aimLine");
+  const ball = document.getElementById("ball");
+  const rollBtn = document.getElementById("rollBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const result = document.getElementById("result");
+  const pins = Array.from(document.querySelectorAll(".pin"));
+  const highScoreEl = document.getElementById("highScore");
+  const sparkle = document.getElementById("sparkle");
+  const levelUpFlash = document.getElementById("levelUpFlash");
+  const copyBtn = document.getElementById("copyBtn");
+  const copyStatus = document.getElementById("copyStatus");
 
-  <div class="sparkle" id="sparkle"></div>
+  let rolling = false;
+  let highScore = Number(localStorage.getItem("bradLevel30BowlingHighScore") || 0);
+  highScoreEl.textContent = highScore;
 
-  <script>
-    const aimSlider = document.getElementById('aimSlider');
-    const powerSlider = document.getElementById('powerSlider');
-    const aimValue = document.getElementById('aimValue');
-    const powerValue = document.getElementById('powerValue');
-    const aimLine = document.getElementById('aimLine');
-    const ball = document.getElementById('ball');
-    const rollBtn = document.getElementById('rollBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const result = document.getElementById('result');
-    const pins = Array.from(document.querySelectorAll('.pin'));
-    const highScoreEl = document.getElementById('highScore');
-    const sparkle = document.getElementById('sparkle');
-    const levelUpFlash = document.getElementById('levelUpFlash');
-    const copyBtn = document.getElementById('copyBtn');
-    const copyStatus = document.getElementById('copyStatus');
+  function updateAim() {
+    const angle = Number(aimSlider.value);
+    const power = Number(powerSlider.value);
+    aimValue.textContent = `${angle}°`;
+    powerValue.textContent = `${power}%`;
+    aimLine.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+    ball.style.left = `calc(50% + ${angle * 0.7}px)`;
+  }
 
-    let rolling = false;
-    let highScore = Number(localStorage.getItem('bradLevel30BowlingHighScore') || 0);
-    highScoreEl.textContent = highScore;
+  function randomBetween(min, max) {
+    return Math.random() * (max - min) + min;
+  }
 
-    function updateAim(){
-      const angle = Number(aimSlider.value);
-      const power = Number(powerSlider.value);
-      aimValue.textContent = `${angle}°`;
-      powerValue.textContent = `${power}%`;
-      aimLine.style.transform = `translateX(-50%) rotate(${angle}deg)`;
-      ball.style.left = `calc(50% + ${angle * 0.7}px)`;
+  function confettiBurst() {
+    const colors = ["#ffd84d", "#ff5db1", "#45e6ff", "#6dff8b", "#ffffff"];
+    for (let i = 0; i < 82; i++) {
+      const c = document.createElement("div");
+      c.className = "confetti";
+      c.style.left = `${Math.random() * 100}vw`;
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = `${randomBetween(1.9, 3.5)}s`;
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      sparkle.appendChild(c);
+      setTimeout(() => c.remove(), 3800);
+    }
+  }
+
+  function levelUp() {
+    levelUpFlash.classList.remove("show");
+    void levelUpFlash.offsetWidth;
+    levelUpFlash.classList.add("show");
+    confettiBurst();
+  }
+
+  function resetPins() {
+    pins.forEach(pin => pin.classList.remove("hidden"));
+    result.textContent = "Can you earn birthday bragging rights?";
+    ball.style.animation = "none";
+    ball.style.removeProperty("--drift");
+    ball.style.removeProperty("--distance");
+    void ball.offsetWidth;
+    rolling = false;
+  }
+
+  function knockPins(count) {
+    const shuffled = [...pins].sort(() => Math.random() - 0.5);
+    shuffled.slice(0, count).forEach((pin, index) => {
+      setTimeout(() => pin.classList.add("hidden"), index * 55);
+    });
+  }
+
+  function scoreRoll(angle, power) {
+    const aimPenalty = Math.abs(angle) * 0.24;
+    const powerBonus = (power - 40) * 0.1;
+    const randomness = randomBetween(-1.8, 2.2);
+    let score = Math.round(6 + powerBonus - aimPenalty + randomness);
+
+    if (Math.abs(angle) <= 5 && power >= 72 && Math.random() > 0.32) {
+      score = Math.max(score, 10);
     }
 
-    function randomBetween(min, max){
-      return Math.random() * (max - min) + min;
-    }
+    return Math.max(0, Math.min(10, score));
+  }
 
-    function confettiBurst(){
-      const colors = ['#ffd84d', '#ff5db1', '#45e6ff', '#6dff8b', '#ffffff'];
-      for(let i = 0; i < 82; i++){
-        const c = document.createElement('div');
-        c.className = 'confetti';
-        c.style.left = `${Math.random() * 100}vw`;
-        c.style.background = colors[Math.floor(Math.random() * colors.length)];
-        c.style.animationDuration = `${randomBetween(1.9, 3.5)}s`;
-        c.style.transform = `rotate(${Math.random()*360}deg)`;
-        sparkle.appendChild(c);
-        setTimeout(() => c.remove(), 3800);
+  function rollBall() {
+    if (rolling) return;
+    rolling = true;
+
+    pins.forEach(pin => pin.classList.remove("hidden"));
+
+    const angle = Number(aimSlider.value);
+    const power = Number(powerSlider.value);
+    const drift = angle * 2.2;
+    const distance = 290 + (power * 1.75);
+
+    ball.style.setProperty("--drift", `${drift}px`);
+    ball.style.setProperty("--distance", `${distance}px`);
+    ball.style.animation = "none";
+    void ball.offsetWidth;
+    ball.style.animation = `roll ${0.9 + (100 - power) / 80}s ease-out forwards`;
+
+    const knocked = scoreRoll(angle, power);
+
+    setTimeout(() => {
+      knockPins(knocked);
+
+      let message = "";
+      if (knocked === 10) {
+        message = "🎉 STRIKE! You just unlocked Level 30 energy.";
+        levelUp();
+      } else if (knocked >= 8) {
+        message = `⚡ ${knocked} pins! Rare loot drop behavior.`;
+      } else if (knocked >= 5) {
+        message = `🎳 ${knocked} pins! Solid side quest success.`;
+      } else if (knocked >= 1) {
+        message = `😂 ${knocked} pins. Still invited, obviously.`;
+      } else {
+        message = `🫠 Critical miss. Good thing this party has snacks.`;
       }
-    }
 
-    function levelUp(){
-      levelUpFlash.classList.remove('show');
-      levelUpFlash.offsetHeight;
-      levelUpFlash.classList.add('show');
-      confettiBurst();
-    }
+      result.textContent = message;
 
-    function resetPins(){
-      pins.forEach(pin => pin.classList.remove('hidden'));
-      result.textContent = 'Can you earn birthday bragging rights?';
-      ball.style.animation = 'none';
-      ball.style.removeProperty('--drift');
-      ball.style.removeProperty('--distance');
-      ball.offsetHeight;
-      rolling = false;
-    }
-
-    function knockPins(count){
-      const shuffled = [...pins].sort(() => Math.random() - 0.5);
-      shuffled.slice(0, count).forEach((pin, index) => {
-        setTimeout(() => pin.classList.add('hidden'), index * 55);
-      });
-    }
-
-    function scoreRoll(angle, power){
-      const aimPenalty = Math.abs(angle) * 0.24;
-      const powerBonus = (power - 40) * 0.1;
-      const randomness = randomBetween(-1.8, 2.2);
-      let score = Math.round(6 + powerBonus - aimPenalty + randomness);
-
-      if (Math.abs(angle) <= 5 && power >= 72 && Math.random() > 0.32) {
-        score = Math.max(score, 10);
+      if (knocked > highScore) {
+        highScore = knocked;
+        localStorage.setItem("bradLevel30BowlingHighScore", highScore);
+        highScoreEl.textContent = highScore;
       }
-
-      return Math.max(0, Math.min(10, score));
-    }
-
-    function rollBall(){
-      if (rolling) return;
-      rolling = true;
-
-      pins.forEach(pin => pin.classList.remove('hidden'));
-
-      const angle = Number(aimSlider.value);
-      const power = Number(powerSlider.value);
-      const drift = angle * 2.2;
-      const distance = 290 + (power * 1.75);
-
-      ball.style.setProperty('--drift', `${drift}px`);
-      ball.style.setProperty('--distance', `${distance}px`);
-      ball.style.animation = `roll ${0.9 + (100 - power) / 80}s ease-out forwards`;
-
-      const knocked = scoreRoll(angle, power);
 
       setTimeout(() => {
-        knockPins(knocked);
+        rolling = false;
+      }, 650);
+    }, 900);
+  }
 
-        let message = '';
-        if (knocked === 10){
-          message = '🎉 STRIKE! You just unlocked Level 30 energy.';
-          levelUp();
-        } else if (knocked >= 8){
-          message = `⚡ ${knocked} pins! Rare loot drop behavior.`;
-        } else if (knocked >= 5){
-          message = `🎳 ${knocked} pins! Solid side quest success.`;
-        } else if (knocked >= 1){
-          message = `😂 ${knocked} pins. Still invited, obviously.`;
-        } else {
-          message = `🫠 Critical miss. Good thing this party has snacks.`;
-        }
+  async function copyInviteText() {
+    const text = `🎳 You’re invited: Brad is leveling up to 30!\n\nJoin us for Brad’s 30th Birthday Bowling Bash.\nSaturday, April 11, 2026 at 6:30 PM\nRiverside Lanes · Anacortes, WA\n\nOpen the invite, play the mini bowling game, and RSVP here:\nhttps://example.com`;
 
-        result.textContent = message;
-
-        if (knocked > highScore){
-          highScore = knocked;
-          localStorage.setItem('bradLevel30BowlingHighScore', highScore);
-          highScoreEl.textContent = highScore;
-        }
-
-        setTimeout(() => {
-          rolling = false;
-        }, 650);
-      }, 900);
+    try {
+      await navigator.clipboard.writeText(text);
+      copyStatus.textContent = "Invite text copied — just swap in your real link.";
+    } catch {
+      copyStatus.textContent = "Clipboard access was blocked here, but the invite text is built into the code.";
     }
+  }
 
-    copyBtn.addEventListener('click', async () => {
-      const text = `🎳 You’re invited: Brad is leveling up to 30!\n\nJoin us for Brad’s 30th Birthday Bowling Bash.\nSaturday, April 11, 2026 at 6:30 PM\nRiverside Lanes · Anacortes, WA\n\nOpen the invite, play the mini bowling game, and RSVP here:\nhttps://example.com`;
-      try{
-        await navigator.clipboard.writeText(text);
-        copyStatus.textContent = 'Invite text copied — just swap in your real link.';
-      } catch {
-        copyStatus.textContent = 'Clipboard access was blocked here, but the invite text is built into the code.';
-      }
-    });
+  aimSlider.addEventListener("input", updateAim);
+  powerSlider.addEventListener("input", updateAim);
+  rollBtn.addEventListener("click", rollBall);
+  resetBtn.addEventListener("click", resetPins);
+  copyBtn.addEventListener("click", copyInviteText);
 
-    aimSlider.addEventListener('input', updateAim);
-    powerSlider.addEventListener('input', updateAim);
-    rollBtn.addEventListener('click', rollBall);
-    resetBtn.addEventListener('click', resetPins);
+  updateAim();
+  resetPins();
+});
+</script>
+  <div class="sparkle" id="sparkle"></div>
 
-    updateAim();
-    resetPins();
-  </script>
-</body>
-</html>
+  
